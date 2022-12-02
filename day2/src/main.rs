@@ -102,8 +102,7 @@ fn parse_input_one() -> Vec<(Choice, Choice)> {
         }
     }
 
-    let result: Result<_, _> = input.lines().map(parser::line).collect();
-    result.unwrap()
+    input.lines().map(parser::line).collect::<Result<_, _>>().unwrap()
 }
 
 fn parse_input_two() -> Vec<(Choice, MatchResult)> {
