@@ -16,10 +16,17 @@ impl Elf {
 
 fn parse_input() -> Vec<Elf> {
     let input = fs::read_to_string("day1/input").unwrap();
-    input.split("\r\n\r\n").map(|chunk| {
-        let food: Vec<i32> = chunk.trim().lines().map(|num| num.parse::<i32>().unwrap()).collect();
-        Elf(food)
-    }).collect()
+    input
+        .split("\r\n\r\n")
+        .map(|chunk| {
+            let food: Vec<i32> = chunk
+                .trim()
+                .lines()
+                .map(|num| num.parse::<i32>().unwrap())
+                .collect();
+            Elf(food)
+        })
+        .collect()
 }
 
 fn part_one(elves: &[Elf]) -> i32 {
