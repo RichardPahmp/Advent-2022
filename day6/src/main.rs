@@ -14,11 +14,7 @@ fn find_marker(input: &str, marker_size: usize) -> usize {
         .position(|window| {
             set.clear();
             set.extend(window.iter());
-            if set.len() == marker_size {
-                true
-            } else {
-                false
-            }
+            set.len() == marker_size
         })
         .unwrap()
         + marker_size
