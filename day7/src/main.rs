@@ -4,7 +4,7 @@ fn main() {
     let input = fs::read_to_string("day7/input").unwrap();
     let parsed = parse_input(&input);
     println!("Answer 1: {}", day_one(&parsed));
-    // println!("Answer 2: {}", day_two(&parsed));
+    println!("Answer 2: {}", day_two(&parsed));
 }
 
 #[derive(Debug)]
@@ -24,7 +24,7 @@ fn parse_input(input: &str) -> Vec<Command<'_>> {
     peg::parser! {
         grammar parser() for str {
             rule name() -> &'input str
-                = name:$(['.'..='z']+) { name }
+                = name:$(['/' | '.'..='z']+) { name }
 
             rule cd() -> Command<'input>
                 = "$ cd " n:name() { Command::ChangeDir(n) }
@@ -48,7 +48,7 @@ fn parse_input(input: &str) -> Vec<Command<'_>> {
                 = "$ ls\r\n" contents:dir_contents() { Command::Ls(contents) }
 
             rule command() -> Command<'input>
-                = cd() / popdir() / ls()
+                = popdir() / cd() / ls()
 
             pub rule root() -> Vec<Command<'input>>
                 = commands:(command() ** "\r\n") { commands }
@@ -57,26 +57,25 @@ fn parse_input(input: &str) -> Vec<Command<'_>> {
     parser::root(input).unwrap()
 }
 
-fn day_one<'a>(commands: &[Command<'a>]) -> u32 {
-    let mut visited: HashMap<&'a str, u32> = HashMap::new();
-    let mut stack = Vec::new();
+fn execute_commands<'a>(commands: &[Command<'a>]) -> HashMap<Vec<&'a str>, u32> {
+    let mut visited: HashMap<Vec<&'a str>, u32> = HashMap::new();
+    let mut cwd = Vec::new();
     for command in commands {
         match command {
             Command::ChangeDir(dir) => {
-                stack.push(dir);
-                let entry = visited.entry(dir).or_insert(0);
-                println!("{entry}");
+                cwd.push(*dir);
+                visited.entry(cwd.clone()).or_insert(0);
             }
             Command::PopDir => {
-                stack.pop();
+                cwd.pop().unwrap();
             }
             Command::Ls(entries) => {
                 for entry in entries {
                     match entry {
                         FileDir::Dir(_) => {}
-                        FileDir::File(name, size) => {
-                            for dir in &stack {
-                                *visited.get_mut(*dir).unwrap() += size;
+                        FileDir::File(_, size) => {
+                            for i in (1..cwd.len() + 1).rev() {
+                                *visited.get_mut(&cwd[0..i]).unwrap() += size;
                             }
                         }
                     }
@@ -84,12 +83,34 @@ fn day_one<'a>(commands: &[Command<'a>]) -> u32 {
             }
         }
     }
-    todo!()
+    visited
+}
+
+fn day_one<'a>(commands: &[Command<'a>]) -> u32 {
+    execute_commands(commands)
+        .iter()
+        .map(|(_, v)| v)
+        .filter(|&&v| v <= 100000)
+        .sum::<u32>()
+}
+
+const DISK_SIZE: u32 = 70000000;
+const TARGET: u32 = 30000000;
+
+fn day_two<'a>(commands: &[Command<'a>]) -> u32 {
+    let dirs = execute_commands(commands);
+    let free = DISK_SIZE - dirs.get(&vec!["/"]).unwrap();
+    *dirs
+        .iter()
+        .map(|(_, v)| v)
+        .filter(|&&v| v >= TARGET - free)
+        .min()
+        .unwrap()
 }
 
 #[test]
 fn test_day_one() {
-    input = r#"$ cd /
+    let input = "$ cd /
 $ ls
 dir a
 14848514 b.txt
@@ -111,7 +132,8 @@ $ ls
 4060174 j
 8033020 d.log
 5626152 d.ext
-7214296 k"#;
+7214296 k
+";
     let input = parse_input(&input);
     assert_eq!(day_one(&input), 95437)
 }
